@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Dialog, DialogTitle, DialogContent, DialogActions, Button } from '@mui/material';
-
+import { reverseGeocode } from '../services/addressService';
+import CreateGuiaDialog from './CreateGuiaDialog';
+import { Endereco } from '../interfaces/Endereco';
 
 
 const MapClickHandler: React.FC<{ onClick: (position: [number, number]) => void }> = ({ onClick }) => {
@@ -22,19 +23,37 @@ const Mapa: React.FC = () => {
   const [open, setOpen] = useState(false);
   const [clickedPosition, setClickedPosition] = useState<[number, number] | null>(null);
   const [markers, setMarkers] = useState<[number, number][]>([]);
+  const [endereco, setEndereco] = useState<Endereco | null>(null);
 
-  const handleMapClick = (position: [number, number]) => {
+  const handleMapClick = async (position: [number, number]) => {
     setClickedPosition(position);
     setMarkers([...markers, position]);
-    //setOpen(true);
+    setOpen(true);
+
+    try {
+      const geocodedData = await reverseGeocode(position[0], position[1]);
+      const adrs = geocodedData.address;
+      const cep = adrs.postcode ?? '';
+      const onlyNumbersCep = cep.replace(/\D/g, '');
+
+      setEndereco({
+        bairro: "",
+        cep: onlyNumbersCep,
+        cidade: adrs.city ?? adrs.town ?? '',
+        logradouro: adrs.road ?? '',
+        complemento: '',
+        numero: ''
+      } as  Endereco);
+    } catch {
+      setEndereco(null);
+    }
   };
 
-  const handleClose = () => {
-    //setOpen(false);
+  const handleCloseDialog = () => {
+    setOpen(false);
     setClickedPosition(null);
+    setEndereco(null);
   };
-
-
 
   return (
     <>
@@ -57,23 +76,15 @@ const Mapa: React.FC = () => {
         <MapClickHandler onClick={handleMapClick} />
       </MapContainer>
 
-      {/* Diálogo para mostrar ao clicar no mapa */}
-      <Dialog open={open} onClose={handleClose}>
-        <DialogTitle>Posição Clicada</DialogTitle>
-        <DialogContent>
-          {clickedPosition && (
-            <div>
-              <p>Latitude: {clickedPosition[0]}</p>
-              <p>Longitude: {clickedPosition[1]}</p>
-            </div>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleClose} color="primary">
-            Fechar
-          </Button>
-        </DialogActions>
-      </Dialog>
+      {clickedPosition && endereco && (
+        <CreateGuiaDialog
+          open={open}
+          onClose={handleCloseDialog}
+          endereco={endereco}
+          latitude={clickedPosition[0]}
+          longitude={clickedPosition[1]}
+        />
+      )}
 
     </>
 
