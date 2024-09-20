@@ -1,14 +1,11 @@
-import './App.css'
-import Mapa from './components/MapContainer';
+import React from 'react';
+
+
 
 const App: React.FC = () => {
-
   return (
-    <div className="App">
-      <h1>Mapa com React Leaflet</h1>
-      <Mapa />
-    </div>
+    <></>
   );
-}
+};
 
-export default App
+export default App;

@@ -124,11 +124,7 @@ const CreateGuiaDialog: React.FC<AddressDialogProps> = ({
         (touchedFields.cidade || getValues('cidade') !== '') && 
         (touchedFields.logradouro || getValues('logradouro') !== '') && 
         (touchedFields.numero || getValues('numero') !== '')) 
-          {
-            console.log('touched')
-            return true;
-
-          }
+        return true;
       
       return false;
     }
