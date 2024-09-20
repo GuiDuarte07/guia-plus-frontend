@@ -1,9 +1,6 @@
-import { StatusCliente } from "../../enums/StatusCliente";
-
 export interface ClienteCreateRequest {
-  cpfCnpj: string;
+  cpf_cnpj: string;
   nomeCompleto: string;
   email: string;
   telefone: string;
-  status: StatusCliente;
 }

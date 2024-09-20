@@ -3,7 +3,7 @@ import { ClienteEnderecoResponse } from "./ClienteEnderecoResponse";
 
 export interface ClienteDetailsResponse {
   id: number;
-  cpfCnpj: string;
+  cpf_cnpj: string;
   nomeCompleto: string;
   email: string;
   telefone: string;
