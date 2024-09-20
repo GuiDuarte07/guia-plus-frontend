@@ -1,50 +1,72 @@
-# React + TypeScript + Vite
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+---
 
-Currently, two official plugins are available:
+# Guia+ Frontend
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+Este é o frontend da aplicação Guia+, desenvolvida em React. O Guia+ é um sistema para gestão e emissão de guias de transporte para clientes de transportadoras, com funcionalidades como cadastro de clientes, gestão de guias e visualização de guias em um mapa interativo.
 
-## Expanding the ESLint configuration
+## Requisitos
 
-If you are developing a production application, we recommend updating the configuration to enable type aware lint rules:
+Certifique-se de que você tem as seguintes ferramentas instaladas em sua máquina:
 
-- Configure the top-level `parserOptions` property like this:
+- [Node.js](https://nodejs.org/)
+- [npm](https://www.npmjs.com/) 
 
-```js
-export default tseslint.config({
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
+## Como rodar o projeto localmente
+
+Siga as etapas abaixo para clonar e rodar o projeto na sua máquina local:
+
+### 1. Clonar o repositório
+
+```bash
+git clone https://github.com/GuiDuarte07/guia-plus-frontend.git
 ```
 
-- Replace `tseslint.configs.recommended` to `tseslint.configs.recommendedTypeChecked` or `tseslint.configs.strictTypeChecked`
-- Optionally add `...tseslint.configs.stylisticTypeChecked`
-- Install [eslint-plugin-react](https://github.com/jsx-eslint/eslint-plugin-react) and update the config:
+### 2. Entrar na pasta do projeto
 
-```js
-// eslint.config.js
-import react from 'eslint-plugin-react'
-
-export default tseslint.config({
-  // Set the react version
-  settings: { react: { version: '18.3' } },
-  plugins: {
-    // Add the react plugin
-    react,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended rules
-    ...react.configs.recommended.rules,
-    ...react.configs['jsx-runtime'].rules,
-  },
-})
+```bash
+cd guia-plus-frontend
 ```
+
+### 3. Instalar as dependências
+
+```bash
+npm install
+```
+
+### 4. Rodar a aplicação
+
+```bash
+npm run dev
+```
+
+### 5. Acessar a aplicação
+
+Após rodar o comando anterior, a aplicação estará disponível em: http://localhost:5173
+
+## Estrutura do Projeto
+
+O projeto está estruturado de forma a seguir as boas práticas de desenvolvimento React, com componentes organizados em pastas como:
+
+- `src/components`: Contém os componentes reutilizáveis da aplicação.
+- `src/pages`: Contém as páginas principais do sistema, como a página de cadastro de clientes e a página de gestão de guias.
+- `src/services`: Contém as integrações com APIs externas, como a API ViaCEP e o backend.
+
+## Comandos Úteis
+
+Aqui estão alguns comandos úteis para o desenvolvimento do projeto:
+
+- `npm run dev`: Inicia o servidor de desenvolvimento.
+- `npm run build`: Gera a build para produção.
+- `npm run preview`: Visualiza a build gerada.
+- `npm run lint`: Executa o linter para identificar erros de formatação.
+
+## Tecnologias Utilizadas
+
+- **React**: Biblioteca JavaScript para construção de interfaces.
+- **Vite**: Ferramenta de build rápida para desenvolvimento frontend.
+- **Leaflet**: Biblioteca de mapas interativos.
+- **Axios**: Biblioteca para fazer requisições HTTP.
+- **Material UI React**: Bliblioteca de componentes do MUI.
+- **React Hooks Form**: Biblioteca para criação e gerencia de formulários.
+- **React Router Dom**: Biblioteca de gerenciamento de rotas
