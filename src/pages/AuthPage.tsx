@@ -33,10 +33,7 @@ const AuthPage: React.FC = () => {
     const hasSpecialChars = /[!@#$%^&*(),.?":{}|<>]/.test(password);
     const isValidLength = password.length >= 6;
 
-    console.log(hasUpperCase, hasLowerCase, hasNumbers, hasSpecialChars, isValidLength)
-
     if (!hasUpperCase || !hasLowerCase || !hasNumbers || !isValidLength || !hasSpecialChars) {
-      console.log('aqui')
       setPasswordError('A senha deve ter pelo menos 6 caracteres, incluindo letras maiúsculas, minúsculas e números.');
       return false;
     }

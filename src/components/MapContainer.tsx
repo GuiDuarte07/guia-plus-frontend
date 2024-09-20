@@ -75,7 +75,6 @@ const Mapa: React.FC = () => {
 
   const updateGuias = async () => {
     const guias = await GuiaService.getAllGuias();
-    console.log(guias)
     setGuias(guias);
   };
 

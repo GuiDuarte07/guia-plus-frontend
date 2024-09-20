@@ -43,7 +43,6 @@ class ClienteService {
       const response = await axios.get<ClienteDetailsResponse>(
         `${cliente_API_URL}/${CpfCnpj}`
       );
-      console.log(response);
       return response.data;
     } catch (error) {
       console.error("Erro ao buscar cliente por CPF ou CNPJ:", error);
@@ -54,7 +53,6 @@ class ClienteService {
   async getAllClientes(): Promise<ClienteSummaryResponse | undefined> {
     try {
       const response = await axios.get<ClienteSummaryResponse>(cliente_API_URL);
-      console.log(response);
       return response.data;
     } catch (error) {
       console.error(error);

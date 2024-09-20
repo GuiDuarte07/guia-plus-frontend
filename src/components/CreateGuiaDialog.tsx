@@ -27,7 +27,7 @@ import GradientSearchButton from "./GradientSearchButton";
 import { ClienteDetailsResponse } from "../DTOs/Cliente/ClienteDetailsResponse";
 import { ServicoResponse } from "../DTOs/Servico/ServicoResponse";
 import GuiaService from "../services/GuiaService";
-import ServicoService from "../services/servicoService";
+import ServicoService from "../services/ServicoService";
 
 interface AddressDialogProps {
   open: boolean;
@@ -85,6 +85,7 @@ const CreateGuiaDialog: React.FC<AddressDialogProps> = ({
   const [enderecoSelecionado, setEnderecoSelecionado] = useState("");
 
   //Atributos de servico
+  const servicoNomeValue = watch("nome");
   const [servicos, setServicos] = useState<ServicoResponse[]>([]);
   const [selectedServico, setSelectedServico] = useState("");
 
@@ -129,7 +130,7 @@ const CreateGuiaDialog: React.FC<AddressDialogProps> = ({
       return false;
     }
     
-    if (selectedServico !== '' || getValues('nome') !== '') return true;
+    if (selectedServico !== '' || servicoNomeValue !== '') return true;
 
     return false;
   };
@@ -183,8 +184,6 @@ const CreateGuiaDialog: React.FC<AddressDialogProps> = ({
             setCliente(newCliente);
             setEnderecoSelecionado("");
             setActiveStep((prevStep) => prevStep + 1);
-
-            console.log(newCliente);
           }
         } else {
           setActiveStep((prevStep) => prevStep + 1);
@@ -249,7 +248,6 @@ const CreateGuiaDialog: React.FC<AddressDialogProps> = ({
 
   //Métodos de endereço
   function handleEnderecoChange(value: string | number) {
-    console.log(value);
     setEnderecoSelecionado(value.toString());
   }
 
