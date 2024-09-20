@@ -17,7 +17,7 @@ import {
   MenuItem,
   Typography,
 } from "@mui/material";
-import { useForm, Controller, SubmitHandler } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { Endereco } from "../interfaces/Endereco";
 import { fetchCep } from "../services/api/viaCep";
 import { ClienteCreateRequest } from "../DTOs/Cliente/ClienteCreateRequest";
@@ -26,6 +26,8 @@ import ClienteService from "../services/ClienteService";
 import GradientSearchButton from "./GradientSearchButton";
 import { ClienteDetailsResponse } from "../DTOs/Cliente/ClienteDetailsResponse";
 import { ServicoResponse } from "../DTOs/Servico/ServicoResponse";
+import GuiaService from "../services/GuiaService";
+import ServicoService from "../services/servicoService";
 
 interface AddressDialogProps {
   open: boolean;
@@ -52,18 +54,18 @@ const CreateGuiaDialog: React.FC<AddressDialogProps> = ({
   const [activeStep, setActiveStep] = useState(0);
   const {
     control,
-    handleSubmit,
-    formState: { errors },
+    formState: { errors, touchedFields },
     setValue,
     watch,
     getValues,
   } = useForm<FormData>({
+    mode: 'onChange',
     defaultValues: {
       nomeCompleto: "",
       cpf_cnpj: "",
       telefone: "",
       email: "",
-      cep: endereco.cep ?? "",
+      cep: endereco.cep ?? "ewewewewewe",
       cidade: endereco.cidade ?? "",
       logradouro: endereco.logradouro ?? "",
       bairro: endereco.bairro ?? "",
@@ -73,108 +75,170 @@ const CreateGuiaDialog: React.FC<AddressDialogProps> = ({
     },
   });
 
-  const [enderecoSelecionado, setEnderecoSelecionado] = useState("");
-
+  //Atributos de cliente
+  const cpf_cnpjValue = watch("cpf_cnpj");
   const [createNewCliente, setCreateNewCliente] = useState(true);
   const [cliente, setCliente] = useState<ClienteDetailsResponse | null>(null);
 
-  const [servicos, setServicos] = useState<ServicoResponse[]>([]);
-  const [selectedService, setSelectedService] = useState("");
-
-  const handleServiceChange = (value: string) => {
-    setSelectedService(value);
-  };
-
-  const handleNewService = () => {
-    setSelectedService('');
-  };
-
-  const handleNext = async () => {
-    if (activeStep === 0) {
-      if (createNewCliente) {
-        const newCliente = await ClienteService.createCliente({
-          cpf_cnpj: getValues("cpf_cnpj"),
-          email: getValues("email"),
-          nomeCompleto: getValues("nomeCompleto"),
-          telefone: getValues("telefone"),
-        });
-
-        if (newCliente) {
-          setCreateNewCliente(false);
-          setCliente(newCliente);
-          setEnderecoSelecionado('');
-          setActiveStep((prevStep) => prevStep + 1);
-
-          console.log(newCliente);
-        }
-      } else {
-        setActiveStep((prevStep) => prevStep + 1);
-      }
-    }
-
-    if (activeStep === 1) {
-      if (enderecoSelecionado === '') {
-        const newEndereco = await ClienteService.createEndereco({
-          bairro: getValues("bairro"),
-          cep: getValues("cep"),
-          cidade: getValues("cidade"),
-          complemento: getValues("complemento"),
-          logradouro: getValues("logradouro"),
-          numero: getValues("numero"),
-          latitude,
-          longitude,
-          clienteId: cliente!.id
-        });
-
-        if(newEndereco) {
-          setEnderecoSelecionado(newEndereco.id.toString());
-          setCliente((cliente) => {
-            if (cliente) {
-              const updatedCliente = {
-                ...cliente,
-                clienteEnderecos: [
-                  ...cliente.clienteEnderecos,
-                  { ...newEndereco }
-                ]
-              };
-          
-              return updatedCliente;
-            }
-            return cliente;
-          });
-          setActiveStep((prevStep) => prevStep + 1);
-        }
-      } else {
-        setActiveStep((prevStep) => prevStep + 1);
-      }
-    }
-  };
-  const handleBack = () => setActiveStep((prevStep) => prevStep - 1);
-
-  const onSubmit: SubmitHandler<FormData> = (data) => {
-    alert("Form Data:");
-    //onClose();
-  };
-
+  //Atributos de endereco
   const cepValue = watch("cep");
-  const cpf_cnpjValue = watch("cpf_cnpj");
+  const [enderecoSelecionado, setEnderecoSelecionado] = useState("");
 
-  useEffect(() => {
-    async function fetchAddress() {
-      if (cepValue && cepValue.length === 8) {
-        const updateEndereco = await fetchCep(cepValue);
+  //Atributos de servico
+  const [servicos, setServicos] = useState<ServicoResponse[]>([]);
+  const [selectedServico, setSelectedServico] = useState("");
 
-        if (updateEndereco) {
-          setValue("logradouro", updateEndereco.logradouro);
-          setValue("bairro", updateEndereco.bairro);
-          setValue("cidade", updateEndereco.localidade);
+  const validators = {
+    validateCpfCnpj: (value: string) => {
+      const cpfCnpjRegex = /^\d+$/;
+      if (cpfCnpjRegex.test(value) && (value.length === 11 || value.length === 14)) return true;
+      return "CPF deve ter 11 dígitos ou CNPJ 14 dígitos.";
+    },
+  
+    validateTelefone: (value: string) => {
+      const telefoneRegex = /^\d{2}\d{8,9}$/;
+      if (telefoneRegex.test(value)) return true;
+      return "Telefone deve ter DDD e 9 ou 8 dígitos.";
+    },
+  
+    validateCep: (value: string) => {
+      const cepRegex = /^\d{8}$/;
+      if (cepRegex.test(value)) return true;
+      return "CEP deve ter 8 dígitos.";
+    },
+  };
+
+  const isStepValid = (step: number): boolean => {
+    if (step === 0) {
+      if (typeof cliente?.id === 'number') return true;
+      if(errors.cpf_cnpj || errors.email || errors.nomeCompleto || errors.telefone) return false;
+      if(touchedFields.cpf_cnpj && touchedFields.email && touchedFields.nomeCompleto && touchedFields.telefone) return true;
+      return false;
+    }
+    if (step === 1) {
+      if (enderecoSelecionado !== '') return true;
+      if (errors.bairro || errors.cep || errors.cidade || errors.logradouro || errors.numero) return false;
+      if (
+        (touchedFields.bairro || getValues('bairro') !== '') && 
+        (touchedFields.cep || getValues('cep') !== '') && 
+        (touchedFields.cidade || getValues('cidade') !== '') && 
+        (touchedFields.logradouro || getValues('logradouro') !== '') && 
+        (touchedFields.numero || getValues('numero') !== '')) 
+          {
+            console.log('touched')
+            return true;
+
+          }
+      
+      return false;
+    }
+    
+    if (selectedServico !== '' || getValues('nome') !== '') return true;
+
+    return false;
+  };
+
+  const formMethods: {
+    handleBack: () => void;
+    handleNext: () => Promise<void>;
+    onSubmit: () => Promise<void>;
+  } = {
+    handleBack: () => setActiveStep((prevStep) => prevStep - 1),
+    onSubmit: async () => {
+      if (activeStep !== 2) return;
+
+      if (!cliente?.id || enderecoSelecionado === "") {
+        alert("dados inválidos.");
+      }
+
+      const clienteId = cliente!.id;
+      const clienteEnderecoId = parseInt(enderecoSelecionado);
+      let servicoId: number;
+
+      if (selectedServico === "") {
+        const newServico = await createServico();
+        servicoId = newServico.id;
+      } else {
+        servicoId = parseInt(selectedServico);
+      }
+
+      const newGuia = await GuiaService.createGuia({
+        clienteEnderecoId,
+        clienteId,
+        servicoId,
+      });
+
+      if (newGuia) {
+        onClose();
+      }
+    },
+    handleNext: async () => {
+      if (activeStep === 0) {
+        if (createNewCliente) {
+          const newCliente = await ClienteService.createCliente({
+            cpf_cnpj: getValues("cpf_cnpj"),
+            email: getValues("email"),
+            nomeCompleto: getValues("nomeCompleto"),
+            telefone: getValues("telefone"),
+          });
+
+          if (newCliente) {
+            setCreateNewCliente(false);
+            setCliente(newCliente);
+            setEnderecoSelecionado("");
+            setActiveStep((prevStep) => prevStep + 1);
+
+            console.log(newCliente);
+          }
+        } else {
+          setActiveStep((prevStep) => prevStep + 1);
         }
       }
-    }
 
-    fetchAddress();
-  }, [cepValue, setValue]);
+      if (activeStep === 1) {
+        if (enderecoSelecionado === "") {
+          const newEndereco = await ClienteService.createEndereco({
+            bairro: getValues("bairro"),
+            cep: getValues("cep"),
+            cidade: getValues("cidade"),
+            complemento: getValues("complemento"),
+            logradouro: getValues("logradouro"),
+            numero: getValues("numero"),
+            latitude,
+            longitude,
+            clienteId: cliente!.id,
+          });
 
+          if (newEndereco) {
+            setEnderecoSelecionado(newEndereco.id.toString());
+            setCliente((cliente) => {
+              if (cliente) {
+                const updatedCliente = {
+                  ...cliente,
+                  clienteEnderecos: [
+                    ...cliente.clienteEnderecos,
+                    { ...newEndereco },
+                  ],
+                };
+
+                return updatedCliente;
+              }
+              return cliente;
+            });
+            setActiveStep((prevStep) => prevStep + 1);
+          }
+        } else {
+          setActiveStep((prevStep) => prevStep + 1);
+        }
+      }
+
+      if (activeStep === 2) {
+        await formMethods.onSubmit();
+      }
+    },
+  };
+
+  //Métodos de cliente
   async function findCliente() {
     const cliente = await ClienteService.getClienteByCpfCnpj(cpf_cnpjValue);
     if (cliente) {
@@ -187,20 +251,52 @@ const CreateGuiaDialog: React.FC<AddressDialogProps> = ({
     }
   }
 
-  useEffect(() => {
-    if (activeStep == 2 && servicos.length === 0) {
-      
-    }
-  },[activeStep])
-
-  useEffect(() => {
-    setCreateNewCliente(true);
-  }, [cpf_cnpjValue]);
-
+  //Métodos de endereço
   function handleEnderecoChange(value: string | number) {
     console.log(value);
     setEnderecoSelecionado(value.toString());
   }
+
+  //Métodos de serviços
+  const handleServiceChange = (value: string) => {
+    setSelectedServico(value);
+  };
+
+  const createServico: () => Promise<ServicoResponse> = async () => {
+    return await ServicoService.createService({
+      nome: getValues("nome"),
+    });
+  };
+
+  //useEffects
+  useEffect(() => {
+    async function fetchAddress() {
+      if (cepValue && cepValue.length === 8) {
+        const updateEndereco = await fetchCep(cepValue);
+
+        if (updateEndereco) {
+          setValue("logradouro", updateEndereco.logradouro);
+          setValue("bairro", updateEndereco.bairro);
+          setValue("cidade", updateEndereco.localidade);
+        }
+      }
+    }
+    fetchAddress();
+  }, [cepValue, setValue]);
+
+  useEffect(() => {
+    async function getServicos() {
+      if (activeStep == 2 && servicos.length === 0) {
+        const servicosList = await ServicoService.getAllServicos();
+        setServicos(servicosList);
+      }
+    }
+    getServicos();
+  }, [activeStep, servicos.length]);
+
+  useEffect(() => {
+    setCreateNewCliente(true);
+  }, [cpf_cnpjValue]);
 
   const step0Form = (
     <>
@@ -219,10 +315,13 @@ const CreateGuiaDialog: React.FC<AddressDialogProps> = ({
               size="small"
               variant="outlined"
               error={!!errors.cpf_cnpj}
-              helperText={errors.cpf_cnpj ? "CPF/CNPJ é obrigatório" : ""}
+              helperText={errors.cpf_cnpj?.message}
             />
           )}
-          rules={{ required: "CPF/CNPJ é obrigatório" }}
+          rules={{ 
+            required: "CPF/CNPJ é obrigatório",
+            validate: validators.validateCpfCnpj 
+          }}
         />
       </Grid>
       <Grid size={1}>
@@ -242,7 +341,7 @@ const CreateGuiaDialog: React.FC<AddressDialogProps> = ({
               variant="outlined"
               error={!!errors.nomeCompleto}
               helperText={
-                errors.nomeCompleto ? "Nome Completo é obrigatório" : ""
+                errors.nomeCompleto?.message
               }
             />
           )}
@@ -262,7 +361,7 @@ const CreateGuiaDialog: React.FC<AddressDialogProps> = ({
               size="small"
               variant="outlined"
               error={!!errors.email}
-              helperText={errors.email ? "Email é obrigatório" : ""}
+              helperText={errors.email?.message}
             />
           )}
           rules={{ required: "Email é obrigatório" }}
@@ -281,10 +380,10 @@ const CreateGuiaDialog: React.FC<AddressDialogProps> = ({
               size="small"
               variant="outlined"
               error={!!errors.telefone}
-              helperText={errors.telefone ? "Telefone é obrigatório" : ""}
+              helperText={errors.telefone?.message}
             />
           )}
-          rules={{ required: "Telefone é obrigatório" }}
+          rules={{ required: "Telefone é obrigatório", validate: validators.validateTelefone }}
         />
       </Grid>
     </>
@@ -372,11 +471,11 @@ const CreateGuiaDialog: React.FC<AddressDialogProps> = ({
                   size="small"
                   variant="outlined"
                   error={!!errors.cep}
-                  helperText={errors.cep ? "CEP é obrigatório" : ""}
+                  helperText={errors.cep?.message}
                   disabled={enderecoSelecionado !== ""}
                 />
               )}
-              rules={{ required: "CEP é obrigatório" }}
+              rules={{ required: "CEP é obrigatório", validate: validators.validateCep }}
             />
           </Grid>
           <Grid size={9}>
@@ -392,7 +491,7 @@ const CreateGuiaDialog: React.FC<AddressDialogProps> = ({
                   variant="outlined"
                   error={!!errors.logradouro}
                   helperText={
-                    errors.logradouro ? "Logradouro é obrigatório" : ""
+                    errors.logradouro?.message
                   }
                   disabled={enderecoSelecionado !== ""}
                 />
@@ -412,7 +511,7 @@ const CreateGuiaDialog: React.FC<AddressDialogProps> = ({
                   size="small"
                   variant="outlined"
                   error={!!errors.bairro}
-                  helperText={errors.bairro ? "Bairro é obrigatório" : ""}
+                  helperText={errors.bairro?.message}
                   disabled={enderecoSelecionado !== ""}
                 />
               )}
@@ -431,7 +530,7 @@ const CreateGuiaDialog: React.FC<AddressDialogProps> = ({
                   size="small"
                   variant="outlined"
                   error={!!errors.cidade}
-                  helperText={errors.cidade ? "Cidade é obrigatória" : ""}
+                  helperText={errors.cidade?.message}
                   disabled={enderecoSelecionado !== ""}
                 />
               )}
@@ -466,7 +565,7 @@ const CreateGuiaDialog: React.FC<AddressDialogProps> = ({
                   size="small"
                   variant="outlined"
                   error={!!errors.numero}
-                  helperText={errors.numero ? "Número é obrigatório" : ""}
+                  helperText={errors.numero?.message}
                   disabled={enderecoSelecionado !== ""}
                 />
               )}
@@ -478,80 +577,91 @@ const CreateGuiaDialog: React.FC<AddressDialogProps> = ({
     </>
   );
 
-  const step2Form =  <>
-  <Grid container spacing={2}>
-    <Grid size={12}>
-      <Typography variant="subtitle1">Dados do Serviço</Typography>
-    </Grid>
-    <Grid size={12}>
-      <FormControl fullWidth size="small">
-        <InputLabel id="servico-label">Nome do Serviço</InputLabel>
-        <Controller
-          name="nome"
-          control={control}
-          defaultValue=""
-          render={({ field }) => (
-            <Select
-              {...field}
-              labelId="servico-label"
-              label="Nome do Serviço"
-              value={selectedService}
-              onChange={(e) => handleServiceChange(e.target.value)}
-            >
-              <MenuItem value="servico1">Serviço 1</MenuItem>
-              <MenuItem value="servico2">Serviço 2</MenuItem>
-            </Select>
-          )}
-        />
-      </FormControl>
-    </Grid>
-
-    <Box position="relative">
-      {selectedService !== "" && (
-        <Box
-          position="absolute"
-          top={0}
-          left={0}
-          right={0}
-          bottom={0}
-          display="flex"
-          justifyContent="center"
-          alignItems="center"
-          bgcolor="rgba(200, 200, 200, 0.7)"
-          zIndex={1}
-          style={{ cursor: "pointer" }}
-          onClick={() => setSelectedService('')}
-        >
-          <Typography variant="subtitle2">
-            Clique para adicionar um novo serviço
-          </Typography>
-        </Box>
-      )}
-      <Grid container spacing={2} sx={{ opacity: selectedService !== "" ? 0.5 : 1, paddingY: 2 }}>
+  const step2Form = (
+    <>
+      <Grid container spacing={2}>
         <Grid size={12}>
-          <Controller
-            name="nome"
-            control={control}
-            render={({ field }) => (
-              <TextField
-                {...field}
-                label="Nome do Serviço"
-                fullWidth
-                size="small"
-                variant="outlined"
-                error={!!errors.nome}
-                helperText={errors.nome ? "Nome do serviço é obrigatório" : ""}
-                disabled={selectedService !== ""}
-              />
-            )}
-            rules={{ required: "Nome do serviço é obrigatório" }}
-          />
+          <Typography variant="subtitle1">Dados do Serviço</Typography>
         </Grid>
-        {/* Adicione outros campos do formulário conforme necessário */}
+        <Grid size={12}>
+          <FormControl fullWidth size="small">
+            <InputLabel id="servico-label">Nome do Serviço</InputLabel>
+            <Controller
+              name="nome"
+              control={control}
+              defaultValue=""
+              render={({ field }) => (
+                <Select
+                  {...field}
+                  labelId="servico-label"
+                  label="Nome do Serviço"
+                  value={selectedServico}
+                  onChange={(e) => handleServiceChange(e.target.value)}
+                >
+                  {servicos.map((servico) => (
+                    <MenuItem key={servico.id} value={servico.id}>
+                      {servico.nome}
+                    </MenuItem>
+                  ))}
+                </Select>
+              )}
+            />
+          </FormControl>
+        </Grid>
+
+        <Box position="relative">
+          {selectedServico !== "" && (
+            <Box
+              position="absolute"
+              top={0}
+              left={0}
+              right={0}
+              bottom={0}
+              display="flex"
+              justifyContent="center"
+              alignItems="center"
+              bgcolor="rgba(200, 200, 200, 0.7)"
+              zIndex={1}
+              style={{ cursor: "pointer" }}
+              onClick={() => setSelectedServico("")}
+            >
+              <Typography variant="subtitle2">
+                Clique para adicionar um novo serviço
+              </Typography>
+            </Box>
+          )}
+          <Grid
+            container
+            spacing={2}
+            sx={{ opacity: selectedServico !== "" ? 0.5 : 1, paddingY: 2 }}
+          >
+            <Grid size={12}>
+              <Controller
+                name="nome"
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    label="Nome do Serviço"
+                    fullWidth
+                    size="small"
+                    variant="outlined"
+                    error={!!errors.nome}
+                    helperText={
+                      errors.nome?.message
+                    }
+                    disabled={selectedServico !== ""}
+                  />
+                )}
+                rules={{ required: "Nome do serviço é obrigatório" }}
+              />
+            </Grid>
+            {/* Adicione outros campos do formulário conforme necessário */}
+          </Grid>
+        </Box>
       </Grid>
-    </Box>
-  </Grid>
-</>
+    </>
+  );
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
@@ -564,7 +674,7 @@ const CreateGuiaDialog: React.FC<AddressDialogProps> = ({
             </Step>
           ))}
         </Stepper>
-        <form onSubmit={handleSubmit(onSubmit)}>
+        <form>
           <Grid container spacing={2} style={{ marginTop: 16 }}>
             {activeStep === 0 && step0Form}
             {activeStep === 1 && step1Form}
@@ -572,21 +682,18 @@ const CreateGuiaDialog: React.FC<AddressDialogProps> = ({
           </Grid>
           <DialogActions>
             {activeStep > 0 && (
-              <Button onClick={handleBack} color="secondary">
+              <Button onClick={formMethods.handleBack} color="secondary">
                 Voltar
               </Button>
             )}
-            {activeStep < steps.length - 1 ? (
-              <Button onClick={handleNext} color="primary">
-                {createNewCliente && activeStep === 0 || enderecoSelecionado === "" && activeStep === 1
-                  ? "Criar"
-                  : "Próximo"}
-              </Button>
-            ) : (
-              <Button type="submit" color="primary">
-                Salvar
-              </Button>
-            )}
+            <Button disabled={!isStepValid(activeStep)} onClick={formMethods.handleNext} color="primary">
+              {(createNewCliente && activeStep === 0) ||
+              (enderecoSelecionado === "" && activeStep === 1)
+                ? "Criar"
+                : activeStep === 2
+                ? "Salvar"
+                : "Próximo"}
+            </Button>
             <Button onClick={onClose} color="secondary">
               Fechar
             </Button>

@@ -5,6 +5,7 @@ import { API_URL } from "./config";
 import { ClienteDetailsResponse } from "../DTOs/Cliente/ClienteDetailsResponse";
 import { ClienteSummaryResponse } from "../DTOs/Cliente/ClienteSummaryResponse";
 import { ClienteEnderecoResponse } from "../DTOs/Cliente/ClienteEnderecoResponse";
+import { EnderecoUpdatePositionRequest } from "../DTOs/Cliente/EnderecoUpdatePositionRequest";
 
 const cliente_API_URL = API_URL + "cliente";
 
@@ -39,7 +40,6 @@ class ClienteService {
 
   async getClienteByCpfCnpj(CpfCnpj: string): Promise<ClienteDetailsResponse> {
     try {
-      console.log(`${cliente_API_URL}/${CpfCnpj}`);
       const response = await axios.get<ClienteDetailsResponse>(
         `${cliente_API_URL}/${CpfCnpj}`
       );
@@ -58,7 +58,19 @@ class ClienteService {
       return response.data;
     } catch (error) {
       console.error(error);
-      return undefined;
+    }
+  }
+
+  async updateEnderecoPosition(
+    enderecoUpdatePositionRequest: EnderecoUpdatePositionRequest
+  ): Promise<void> {
+    try {
+      await axios.put(
+        `${cliente_API_URL}/position`,
+        enderecoUpdatePositionRequest
+      );
+    } catch (error) {
+      console.error(error);
     }
   }
 }
